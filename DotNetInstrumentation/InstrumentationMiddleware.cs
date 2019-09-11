@@ -1,7 +1,10 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using HtmlAgilityPack;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Mime;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace DotNetInstrumentation
@@ -47,6 +50,7 @@ namespace DotNetInstrumentation
             var startTime = DateTime.Now;
             var bodyLength = 0L;
             var originalBody = context.Response.Body;
+            TimeSpan interval;
 
             try
             {
@@ -61,7 +65,11 @@ namespace DotNetInstrumentation
 
                     context.Response.Body.Seek(0, SeekOrigin.Begin);
 
-                    var contentType = context.Response.Headers["Content-Type"];
+                    CalculateBodyStatistics(bodyLength);
+
+                    interval = DateTime.Now - startTime;
+
+                    await WriteContent(context, interval);
 
                     await context.Response.Body.CopyToAsync(originalBody);
                 }
@@ -71,6 +79,11 @@ namespace DotNetInstrumentation
                 context.Response.Body = originalBody;
             }
 
+            System.Diagnostics.Trace.WriteLine($"Request path: {context.Request.Path}\n   Response time (ms): {interval.TotalMilliseconds}\n   Body length average: {this.Average}\n   Body length minimum: {this.Minimum}\n   Body length maximum: {this.Maximum}");
+        }
+
+        private void CalculateBodyStatistics(long bodyLength)
+        {
             if (bodyLength < this.Minimum || this.Count == 0)
             {
                 this.Minimum = bodyLength;
@@ -83,10 +96,43 @@ namespace DotNetInstrumentation
 
             this.Total += bodyLength;
             this.Average = this.Total / ++this.Count;
+        }
 
-            var interval = DateTime.Now - startTime;
+        private async Task WriteContent(HttpContext context, TimeSpan interval)
+        {
+            var contentType = new ContentType(context.Response.ContentType);
 
-            System.Diagnostics.Trace.WriteLine($"Request path: {context.Request.Path}\n   Response time (ms): {interval.TotalMilliseconds}\n   Body length average: {this.Average}\n   Body length minimum: {this.Minimum}\n   Body length maximum: {this.Maximum}");
+            if (contentType.MediaType == "text/html")
+            {
+                var reader = new StreamReader(context.Response.Body);
+
+                var html = await reader.ReadToEndAsync();
+
+                context.Response.Body.Seek(0, SeekOrigin.Begin);
+
+                var content = $"<div>Time: {interval.TotalMilliseconds} ms<br/ >Body length minimum: {this.Minimum}<br/ >Body length maximum: {this.Maximum}<br/ >Body length average: {this.Average}</div>";
+                var bodyTag = "<body>";
+                var bodyIndex = html.IndexOf(bodyTag);
+
+                html = html.Insert(bodyIndex + bodyTag.Length, content);
+
+                var buffer = Encoding.UTF8.GetBytes(html);
+                context.Response.Body.Write(buffer, 0, buffer.Length);
+
+                context.Response.Body.Seek(0, SeekOrigin.Begin);
+
+                //var document = new HtmlDocument();
+                //document.LoadHtml(html);
+
+                //var body = document.DocumentNode.SelectNodes("//body");
+                //var node = CreateContentNode(document);
+                //body.Insert(0, node);
+            }
+        }
+
+        private HtmlNode CreateContentNode(HtmlDocument document)
+        {
+            return new HtmlNode(HtmlNodeType.Element, document, 0);
         }
     }
 }
