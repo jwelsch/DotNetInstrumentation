@@ -7,7 +7,7 @@ namespace DotNetInstrumentation
 {
     public class ProcessorRunner
     {
-        public IEnumerable<IProcessor> processors;
+        private IEnumerable<IProcessor> processors;
 
         public ProcessorRunner(IEnumerable<IProcessor> processors)
         {
