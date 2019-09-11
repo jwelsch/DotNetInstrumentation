@@ -4,7 +4,7 @@ using System.Text;
 
 namespace DotNetInstrumentation
 {
-    public class RequestTimerResult : IProcessorResult
+    public class RequestTimerResult : ProcessorResult
     {
         public TimeSpan Interval
         {
@@ -12,8 +12,14 @@ namespace DotNetInstrumentation
         }
 
         public RequestTimerResult(TimeSpan interval)
+            : base()
         {
             this.Interval = interval;
+        }
+
+        public RequestTimerResult(Exception error)
+            : base(error)
+        {
         }
     }
 }

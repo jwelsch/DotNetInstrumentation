@@ -7,16 +7,25 @@ namespace DotNetInstrumentation
 {
     public class RequestTimerProcessor : IProcessor
     {
-        private DateTime start;
+        private Dictionary<string, DateTime> startTimes = new Dictionary<string, DateTime>();
 
         public void Start(HttpContext context)
         {
-            this.start = DateTime.Now;
+            this.startTimes.Add(context.TraceIdentifier, DateTime.Now);
         }
 
         public IProcessorResult Stop(HttpContext context)
         {
-            var interval = DateTime.Now - this.start;
+            DateTime start;
+
+            if (!this.startTimes.TryGetValue(context.TraceIdentifier, out start))
+            {
+                return new RequestTimerResult(new HttpContextNotFoundException($"Could not find start time for context {context.TraceIdentifier}"));
+            }
+
+            this.startTimes.Remove(context.TraceIdentifier);
+
+            var interval = DateTime.Now - start;
 
             return new RequestTimerResult(interval);
         }

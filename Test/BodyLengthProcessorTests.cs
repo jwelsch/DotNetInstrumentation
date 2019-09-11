@@ -105,5 +105,18 @@ namespace Test
                 Assert.AreEqual(average, result.Average);
             }
         }
+
+        [TestMethod]
+        public void DoesNotThrowExceptionWhenStartIsNotCalled()
+        {
+            var context = new DefaultHttpContext();
+
+            var processor = new BodyLengthProcessor();
+
+            var result = processor.Stop(context);
+
+            Assert.IsFalse(result.IsError);
+            Assert.IsNull(result.Error);
+        }
     }
 }
