@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using DotNetInstrumentation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -31,8 +32,18 @@ namespace ExampleApp
                 options.MinimumSameSitePolicy = SameSiteMode.None;
             });
 
-
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
+
+            services.AddSingleton<InstrumentationMiddleware>();
+            services.AddSingleton<IResultDisplay, InstrumentationResultDisplay>();
+            services.AddSingleton<IEnumerable<IProcessor>>(sp =>
+            {
+                return new IProcessor[]
+                {
+                    new BodyLengthProcessor(),
+                    new RequestTimerProcessor()
+                };
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -48,6 +59,8 @@ namespace ExampleApp
                 // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
             }
+
+            app.UseInstrumentationMiddleware();
 
             app.UseHttpsRedirection();
             app.UseStaticFiles();

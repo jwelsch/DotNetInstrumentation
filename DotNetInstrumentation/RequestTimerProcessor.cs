@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 
 namespace DotNetInstrumentation
@@ -9,12 +10,12 @@ namespace DotNetInstrumentation
     {
         private Dictionary<string, DateTime> startTimes = new Dictionary<string, DateTime>();
 
-        public void Start(HttpContext context)
+        public async Task StartAsync(HttpContext context)
         {
             this.startTimes.Add(context.TraceIdentifier, DateTime.Now);
         }
 
-        public IProcessorResult Stop(HttpContext context)
+        public async Task<IProcessorResult> StopAsync(HttpContext context)
         {
             DateTime start;
 

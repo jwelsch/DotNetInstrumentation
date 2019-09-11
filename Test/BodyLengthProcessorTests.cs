@@ -18,9 +18,9 @@ namespace Test
 
             context.Response.Body = new MemoryStream(Encoding.UTF8.GetBytes("This is a sample body."));
 
-            processor.Start(context);
+            processor.StartAsync(context);
 
-            var result = (BodyLengthResult) processor.Stop(context);
+            var result = (BodyLengthResult) processor.StopAsync(context);
 
             Assert.AreEqual(22, result.Minimum);
             Assert.AreEqual(22, result.Maximum);
@@ -34,9 +34,9 @@ namespace Test
 
             var context = new DefaultHttpContext();
 
-            processor.Start(context);
+            processor.StartAsync(context);
 
-            var result = (BodyLengthResult)processor.Stop(context);
+            var result = (BodyLengthResult)processor.StopAsync(context);
 
             Assert.AreEqual(0, result.Minimum);
             Assert.AreEqual(0, result.Maximum);
@@ -58,9 +58,9 @@ namespace Test
 
                 context.Response.Body = new MemoryStream(Encoding.UTF8.GetBytes($"This is a sample body {i}."));
 
-                processor.Start(context);
+                processor.StartAsync(context);
 
-                var result = (BodyLengthResult)processor.Stop(context);
+                var result = (BodyLengthResult)processor.StopAsync(context);
 
                 total += context.Response.Body.Length;
                 average = total / (i + 1);
@@ -91,9 +91,9 @@ namespace Test
                     context.Response.Body = new MemoryStream(Encoding.UTF8.GetBytes($"This is a sample body {i}."));
                 }
 
-                processor.Start(context);
+                processor.StartAsync(context);
 
-                var result = (BodyLengthResult)processor.Stop(context);
+                var result = (BodyLengthResult)processor.StopAsync(context);
 
                 total += context.Response.Body.Length;
                 average = total / (i + 1);
@@ -113,7 +113,7 @@ namespace Test
 
             var processor = new BodyLengthProcessor();
 
-            var result = processor.Stop(context);
+            var result = processor.StopAsync(context);
 
             Assert.IsFalse(result.IsError);
             Assert.IsNull(result.Error);

@@ -17,11 +17,11 @@ namespace Test
 
             var processor = new RequestTimerProcessor();
 
-            processor.Start(context);
+            processor.StartAsync(context);
 
             System.Threading.Thread.Sleep(100);
 
-            var result = (RequestTimerResult) processor.Stop(context);
+            var result = (RequestTimerResult) processor.StopAsync(context);
 
             Assert.IsFalse(result.IsError);
             Assert.IsTrue(result.Interval.TotalMilliseconds > 100);
@@ -34,7 +34,7 @@ namespace Test
 
             var processor = new RequestTimerProcessor();
 
-            var result = processor.Stop(context);
+            var result = processor.StopAsync(context);
 
             Assert.IsTrue(result.IsError);
             Assert.IsInstanceOfType(result.Error, typeof(HttpContextNotFoundException));

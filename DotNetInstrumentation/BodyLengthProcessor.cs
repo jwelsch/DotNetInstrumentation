@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 
 namespace DotNetInstrumentation
@@ -17,25 +19,49 @@ namespace DotNetInstrumentation
 
         public int Count { get; private set; }
 
-        public void Start(HttpContext context)
+        private Dictionary<string, Stream> originalBodies = new Dictionary<string, Stream>();
+
+        public async Task StartAsync(HttpContext context)
         {
+            //this.originalBodies.Add()
         }
 
-        public IProcessorResult Stop(HttpContext context)
+        public async Task<IProcessorResult> StopAsync(HttpContext context)
         {
-            var bytes = context.Response.Body.Length;
+            var totalCount = 0L;
 
-            if (bytes < this.Minimum || this.Count == 0)
+            var originalBody = context.Response.Body;
+
+            context.Response.Body.Seek(0, SeekOrigin.Begin);
+
+            using (var memoryStream = new MemoryStream())
             {
-                this.Minimum = bytes;
+                var bufferLength = 1000 * 1024;
+                var buffer = new byte[bufferLength];
+                var readCount = 0L;
+
+                do
+                {
+                    readCount = await context.Response.Body.ReadAsync(buffer, 0, bufferLength);
+
+                    totalCount += readCount;
+                }
+                while (readCount == bufferLength);
+
+                context.Response.Body.Seek(0, SeekOrigin.Begin);
             }
 
-            if (bytes > this.Maximum || this.Count == 0)
+            if (totalCount < this.Minimum || this.Count == 0)
             {
-                this.Maximum = bytes;
+                this.Minimum = totalCount;
             }
 
-            this.Total += bytes;
+            if (totalCount > this.Maximum || this.Count == 0)
+            {
+                this.Maximum = totalCount;
+            }
+
+            this.Total += totalCount;
             this.Average = this.Total / ++this.Count;
 
             return new BodyLengthResult(this.Minimum, this.Maximum, this.Average);

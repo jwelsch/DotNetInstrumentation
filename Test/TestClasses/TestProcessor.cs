@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Test.TestClasses
 {
@@ -10,12 +11,12 @@ namespace Test.TestClasses
     {
         private bool wasStartCalled;
 
-        public void Start(HttpContext context)
+        public async Task StartAsync(HttpContext context)
         {
             this.wasStartCalled = true;
         }
 
-        public IProcessorResult Stop(HttpContext context)
+        public async Task<IProcessorResult> StopAsync(HttpContext context)
         {
             return new TestProcessorResult(this.wasStartCalled, true);
         }

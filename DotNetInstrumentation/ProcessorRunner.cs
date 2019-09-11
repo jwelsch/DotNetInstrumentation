@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace DotNetInstrumentation
 {
@@ -14,21 +15,27 @@ namespace DotNetInstrumentation
             this.processors = processors;
         }
 
-        public void Start(HttpContext context)
+        public async Task Start(HttpContext context)
         {
-            foreach (var processor in this.processors)
+            if (this.processors != null)
             {
-                processor.Start(context);
+                foreach (var processor in this.processors)
+                {
+                    await processor.StartAsync(context);
+                }
             }
         }
 
-        public void Stop(HttpContext context, IResultDisplay resultDisplay)
+        public async Task Stop(HttpContext context, IResultDisplay resultDisplay)
         {
-            foreach (var processor in this.processors)
+            if (this.processors != null)
             {
-                var result = processor.Stop(context);
+                foreach (var processor in this.processors)
+                {
+                    var result = await processor.StopAsync(context);
 
-                resultDisplay.Display(result);
+                    resultDisplay.Display(result);
+                }
             }
         }
     }

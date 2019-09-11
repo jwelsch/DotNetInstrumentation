@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace DotNetInstrumentation
@@ -24,40 +25,90 @@ namespace DotNetInstrumentation
     //      - Include an amazing README in your GitHub project that explains what you built, why you built it, how to deploy it up and how to use it. Include the AppVeyor or Azure DevOps build badge in your README to show status.
     //      - Your project’s README should also outline future improvements you would like to make to the project.
 
-    public class InstrumentationMiddleware
+    public class InstrumentationMiddleware : IMiddleware
     {
-        private readonly RequestDelegate _next;
-
         private object lockObj1 = new object();
         private object lockObj2 = new object();
 
         private ProcessorRunner processorRunner;
         private IResultDisplay resultDisplay;
 
-        public InstrumentationMiddleware(RequestDelegate next, IEnumerable<IProcessor> processors, IResultDisplay resultDisplay)
-        {
-            _next = next;
+        public long Minimum { get; private set; } = long.MaxValue;
 
+        public long Maximum { get; private set; } = long.MinValue;
+
+        public double Average { get; private set; }
+
+        public long Total { get; private set; }
+
+        public int Count { get; private set; }
+
+
+        public InstrumentationMiddleware(IEnumerable<IProcessor> processors, IResultDisplay resultDisplay)
+        {
             this.processorRunner = new ProcessorRunner(processors);
             this.resultDisplay = resultDisplay;
         }
 
-        public async Task InvokeAsync(HttpContext context)
+        public async Task InvokeAsync(HttpContext context, RequestDelegate next)
         {
-            lock (lockObj1)
-            {
-                context.TraceIdentifier = Guid.NewGuid().ToString();
+            var startTime = DateTime.Now;
+            var bodyLength = 0L;
+            var originalBody = context.Response.Body;
 
-                this.processorRunner.Start(context);
+            try
+            {
+                // Need to change response body to a stream that has a length.
+                using (var memoryStream = new MemoryStream())
+                {
+                    context.Response.Body = memoryStream;
+
+                    await next(context);
+
+                    bodyLength = context.Response.Body.Length;
+
+                    context.Response.Body.Seek(0, SeekOrigin.Begin);
+
+                    await context.Response.Body.CopyToAsync(originalBody);
+                }
+            }
+            finally
+            {
+                context.Response.Body = originalBody;
             }
 
-            // Call the next delegate/middleware in the pipeline
-            await _next(context);
-
-            lock (lockObj2)
+            if (bodyLength < this.Minimum || this.Count == 0)
             {
-                this.processorRunner.Stop(context, this.resultDisplay);
+                this.Minimum = bodyLength;
             }
+
+            if (bodyLength > this.Maximum || this.Count == 0)
+            {
+                this.Maximum = bodyLength;
+            }
+
+            this.Total += bodyLength;
+            this.Average = this.Total / ++this.Count;
+
+            var interval = DateTime.Now - startTime;
+
+            System.Diagnostics.Trace.WriteLine($"Request path: {context.Request.Path}\n   Response time (ms): {interval.TotalMilliseconds}\n   Body length average: {this.Average}\n   Body length minimum: {this.Minimum}\n   Body length maximum: {this.Maximum}");
         }
+
+        //public async Task InvokeAsync(HttpContext context, RequestDelegate next)
+        //{
+        //    lock (lockObj1)
+        //    {
+        //        this.processorRunner.Start(context);
+        //    }
+
+        //    // Call the next delegate/middleware in the pipeline
+        //    await next(context);
+
+        //    lock (lockObj2)
+        //    {
+        //        this.processorRunner.Stop(context, this.resultDisplay);
+        //    }
+        //}
     }
 }

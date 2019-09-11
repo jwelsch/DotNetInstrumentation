@@ -2,13 +2,14 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace DotNetInstrumentation
 {
     public interface IProcessor
     {
-        void Start(HttpContext context);
+        Task StartAsync(HttpContext context);
 
-        IProcessorResult Stop(HttpContext context);
+        Task<IProcessorResult> StopAsync(HttpContext context);
     }
 }
