@@ -35,15 +35,6 @@ namespace ExampleApp
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
 
             services.AddSingleton<InstrumentationMiddleware>();
-            services.AddSingleton<IResultDisplay, InstrumentationResultDisplay>();
-            services.AddSingleton<IEnumerable<IProcessor>>(sp =>
-            {
-                return new IProcessor[]
-                {
-                    new BodyLengthProcessor(),
-                    new RequestTimerProcessor()
-                };
-            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

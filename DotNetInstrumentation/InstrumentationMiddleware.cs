@@ -27,12 +27,6 @@ namespace DotNetInstrumentation
 
     public class InstrumentationMiddleware : IMiddleware
     {
-        private object lockObj1 = new object();
-        private object lockObj2 = new object();
-
-        private ProcessorRunner processorRunner;
-        private IResultDisplay resultDisplay;
-
         public long Minimum { get; private set; } = long.MaxValue;
 
         public long Maximum { get; private set; } = long.MinValue;
@@ -44,10 +38,8 @@ namespace DotNetInstrumentation
         public int Count { get; private set; }
 
 
-        public InstrumentationMiddleware(IEnumerable<IProcessor> processors, IResultDisplay resultDisplay)
+        public InstrumentationMiddleware()
         {
-            this.processorRunner = new ProcessorRunner(processors);
-            this.resultDisplay = resultDisplay;
         }
 
         public async Task InvokeAsync(HttpContext context, RequestDelegate next)
@@ -68,6 +60,8 @@ namespace DotNetInstrumentation
                     bodyLength = context.Response.Body.Length;
 
                     context.Response.Body.Seek(0, SeekOrigin.Begin);
+
+                    var contentType = context.Response.Headers["Content-Type"];
 
                     await context.Response.Body.CopyToAsync(originalBody);
                 }
@@ -94,21 +88,5 @@ namespace DotNetInstrumentation
 
             System.Diagnostics.Trace.WriteLine($"Request path: {context.Request.Path}\n   Response time (ms): {interval.TotalMilliseconds}\n   Body length average: {this.Average}\n   Body length minimum: {this.Minimum}\n   Body length maximum: {this.Maximum}");
         }
-
-        //public async Task InvokeAsync(HttpContext context, RequestDelegate next)
-        //{
-        //    lock (lockObj1)
-        //    {
-        //        this.processorRunner.Start(context);
-        //    }
-
-        //    // Call the next delegate/middleware in the pipeline
-        //    await next(context);
-
-        //    lock (lockObj2)
-        //    {
-        //        this.processorRunner.Stop(context, this.resultDisplay);
-        //    }
-        //}
     }
 }
