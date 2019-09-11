@@ -13,7 +13,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
 
     <PackageId>JustinWelsch.DotNetInstrumentation</PackageId>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <Authors>Justin Welsch</Authors>
     <Description>Collects basic information on HTTP requests.</Description>
     <IsPackable>true</IsPackable>
