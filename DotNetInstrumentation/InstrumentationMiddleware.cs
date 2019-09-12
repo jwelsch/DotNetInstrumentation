@@ -40,7 +40,10 @@ namespace DotNetInstrumentation
 
         public async Task InvokeAsync(HttpContext context, RequestDelegate next)
         {
+            // Record start time of request.
             var startTime = DateTime.Now;
+
+            // Save a reference to the original body of the response.
             var originalBody = context.Response.Body;
 
             try
@@ -48,11 +51,13 @@ namespace DotNetInstrumentation
                 // Need to change response body to a stream that has a length.
                 using (var memoryStream = new MemoryStream())
                 {
+                    // Swap the response body with a MemoryStream, which can read and seek.
                     context.Response.Body = memoryStream;
 
                     // Send request down pipeline.
                     await next(context);
 
+                    // Get the content type of the response to determine encoding.
                     var contentType = new ContentType(context.Response.ContentType);
 
                     context.Response.Body.SeekToBegining();
@@ -61,47 +66,60 @@ namespace DotNetInstrumentation
 
                     lock (lockObj)
                     {
+                        // Add the request data to the statistics data.
                         this.bodyStatistics.AddRequest(context.Response.Body.Length);
+
+                        // Create a new variable with a copy of the body statistics for thread safety.
                         requestBodyStatistics = new BodyStatistics(this.bodyStatistics);
                     }
 
+                    // Calculate the length of time the request took.
                     var interval = DateTime.Now - startTime;
 
+                    // Write the gathered information to any HTML page.
                     await WriteContent(memoryStream, contentType, requestBodyStatistics, interval);
 
+                    // Copy the data in the local MemoryStream to the original body.
                     await memoryStream.CopyToAsync(originalBody);
                 }
             }
             finally
             {
+                // Set the reference to the original body in the response object so it gets returned to the client.
                 context.Response.Body = originalBody;
             }
-
-            //System.Diagnostics.Trace.WriteLine($"Request path: {context.Request.Path}\n   Response time (ms): {interval.TotalMilliseconds}\n   Body length average: {this.Average}\n   Body length minimum: {this.Minimum}\n   Body length maximum: {this.Maximum}");
         }
 
         private static async Task WriteContent(Stream stream, ContentType contentType, BodyStatistics bodyStatistics, TimeSpan interval)
         {
+            // Only inject the gathered information into HTML pages.
             if (contentType.MediaType == "text/html")
             {
+                // Get an encoding object for use later.
                 var encoding = Encoding.GetEncoding(contentType.CharSet);
 
                 stream.SeekToBegining();
 
+                // Construct the HTML to be injected.
                 var content = $"Time: {interval.TotalMilliseconds} ms<br/ >Body length minimum: {bodyStatistics.Minimum}<br/ >Body length maximum: {bodyStatistics.Maximum}<br/ >Body length average: {bodyStatistics.Average}";
 
+                // Parse the HTML that is to be returned to the client.
                 var parser = new HtmlParser();
                 var document = await parser.ParseDocumentAsync(stream);
 
+                // Create a new HTML div element to hold the injected informatin.
                 var div = document.CreateElement("div");
                 div.InnerHtml = content;
 
+                // Add the new HTML div to the document.
                 document.Body.Prepend(div);
 
                 stream.SeekToBegining();
 
+                // Truncate the stream that will be sent to the client so as to not return anything that shouldn't.
                 stream.SetLength(0);
 
+                // Write the HTML with the injected information to the response stream.
                 using (var writer = new StreamWriter(stream, encoding, 4096, true))
                 {
                     await writer.WriteAsync(document.DocumentElement.OuterHtml);

@@ -34,6 +34,7 @@ namespace ExampleApp
 
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
 
+            // Set up dependency injection for the instrumentation middleware.
             services.AddSingleton<InstrumentationMiddleware>();
         }
 
@@ -51,6 +52,7 @@ namespace ExampleApp
                 app.UseHsts();
             }
 
+            // Add the instrumentation middleware to the pipeline.
             app.UseInstrumentationMiddleware();
 
             app.UseHttpsRedirection();
